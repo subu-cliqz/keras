@@ -324,9 +324,16 @@ class Adam(Optimizer):
 
         t = self.iterations + 1
         lr_t = self.lr * K.sqrt(1. - K.pow(self.beta_2, t)) / (1. - K.pow(self.beta_1, t))
-
-        ms = [K.variable(np.zeros(K.get_value(p).shape)) for p in params]
-        vs = [K.variable(np.zeros(K.get_value(p).shape)) for p in params]
+       def custom_init(p):
+                import tensorflow as tf
+                sess = K.get_session()
+                place = K.placeholder(dtype='float32', shape=K.get_value(p).shape)
+                V = tf.Variable(place)
+                set_v = V.assign(place)
+                sess.run(set_v, feed_dict={place: np.zeros(K.get_value(p).shape, dtype=np.float32)})
+                return V
+        ms = [K.variable(np.zeros(K.get_value(p).shape)) if p.name != u'embedding/embedding_1_W:0' else custom_init(p) for p in params]
+        vs = [K.variable(np.zeros(K.get_value(p).shape)) if p.name != u'embedding/embedding_1_W:0' else custom_init(p) for p in params]
         self.weights = ms + vs
 
         for p, g, m, v in zip(params, grads, ms, vs):
